@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Elite Auction Board</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Arial Black', sans-serif;
+  background: transparent;
+  color: white;
+}
+
+/* ISLAND STYLE */
+.island {
+  width: 360px;
+  margin: 5px auto;
+  padding: 10px;
+  border-radius: 15px;
+  text-align: center;
+  font-size: 18px;
+  background: rgba(0,0,0,0.6);
+  box-shadow: 0 0 15px var(--main, #00ffc8);
+}
+
+/* MAIN BOARD */
+.panel {
+  width: 360px;
+  margin: auto;
+  padding: 15px;
+  border-radius: 20px;
+  background: rgba(0,0,0,var(--opacity,0.7));
+  box-shadow: 0 0 25px var(--main, #00ffc8);
+}
+
+/* TIMER */
+#timer {
+  font-size: 75px;
+  text-align: center;
+  color: var(--main, #00ffc8);
+}
+
+.low {
+  color: red;
+}
+
+/* PARTICIPANTS */
+.participant {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px;
+}
+
+/* FEED */
+.feed-item {
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.05);
+  margin: 3px 0;
+  padding: 5px;
+  border-radius: 8px;
+}
+
+.feed-item img {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+/* WAITING */
+.waiting {
+  text-align: center;
+  color: gray;
+  margin-top: 10px;
+}
+
+/* CONTROLS */
+.controls {
+  margin-top: 10px;
+  text-align: center;
+}
+
+button, input {
+  margin: 3px;
+  padding: 6px;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  background: var(--main, #00ffc8);
+  color: black;
+  font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SNIPE -->
+<div class="island">
+⏱️ SNIPE DELAY: <span id="snipe">10</span>s
+</div>
+
+<!-- VOUCH -->
+<div class="island">
+🧾 VOUCHES: <span id="vouch">0</span>
+</div>
+
+<!-- MAIN -->
+<div class="panel">
+
+<div id="timer">00:30</div>
+
+<div id="participants"></div>
+
+<div id="waiting" class="waiting">Waiting for players...</div>
+
+<div id="feed"></div>
+
+</div>
+
+<!-- CONTROLS -->
+<div id="controls" class="controls">
+
+<input id="timeInput" placeholder="Time">
+<button onclick="setTime()">Set Time</button>
+
+<input id="snipeInput" placeholder="Snipe">
+<button onclick="setSnipe()">Set</button>
+
+<button onclick="start()">Start</button>
+<button onclick="reset()">Reset</button>
+
+<button onclick="sendGift()">Send Gift</button>
+<button onclick="addVouch()">Vouch</button>
+
+<input id="color" placeholder="Color (red, blue)">
+<button onclick="setColor()">Set Color</button>
+
+<input id="opacity" placeholder="0-1">
+<button onclick="setOpacity()">Transparency</button>
+
+</div>
+
+<script>
+let time = 30;
+let interval;
+let running = false;
+let snipeDelay = 10;
+let players = [];
+
+function format(t){
+let m = Math.floor(t/60);
+let s = t%60;
+return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+}
+
+function updateTimer(){
+let t = document.getElementById("timer");
+t.innerText = format(time);
+
+if(time<=5){
+t.classList.add("low");
+}else{
+t.classList.remove("low");
+}
+}
+
+function start(){
+if(running)return;
+running=true;
+
+interval=setInterval(()=>{
+if(time>0){
+time--;
+updateTimer();
+}else{
+clearInterval(interval);
+alert("🏆 WINNER!");
+}
+},1000);
+}
+
+function reset(){
+clearInterval(interval);
+running=false;
+time=30;
+updateTimer();
+}
+
+function setTime(){
+time=parseInt(document.getElementById("timeInput").value);
+updateTimer();
+}
+
+function setSnipe(){
+snipeDelay=parseInt(document.getElementById("snipeInput").value);
+document.getElementById("snipe").innerText=snipeDelay;
+}
+
+function sendGift(){
+let name=prompt("User:");
+let coins=parseInt(prompt("Coins:"));
+let img=prompt("Image URL:");
+
+let player=players.find(p=>p.name===name);
+if(!player){
+player={name,coins:0};
+players.push(player);
+}
+
+player.coins+=coins;
+
+if(time<=5){
+time+=snipeDelay;
+}
+
+renderPlayers();
+
+document.getElementById("waiting").style.display="none";
+
+let feed=document.getElementById("feed");
+let item=document.createElement("div");
+item.className="feed-item";
+
+item.innerHTML=`
+${img?`<img src="${img}">`:""}
+${name} sent ${coins}
+`;
+
+feed.prepend(item);
+}
+
+function renderPlayers(){
+let list=document.getElementById("participants");
+list.innerHTML="";
+
+players.sort((a,b)=>b.coins-a.coins);
+
+players.forEach((p,i)=>{
+let medal=["🥇","🥈","🥉"][i]||"";
+let div=document.createElement("div");
+div.className="participant";
+div.innerHTML=`${medal} ${p.name} <span>${p.coins}</span>`;
+list.appendChild(div);
+});
+}
+
+function addVouch(){
+let v=document.getElementById("vouch");
+v.innerText=parseInt(v.innerText)+1;
+}
+
+function setColor(){
+let c=document.getElementById("color").value;
+document.documentElement.style.setProperty("--main",c);
+}
+
+function setOpacity(){
+let o=document.getElementById("opacity").value;
+document.documentElement.style.setProperty("--opacity",o);
+}
+
+/* HIDE CONTROLS FOR STREAM */
+if(!window.location.search.includes("control=true")){
+document.getElementById("controls").style.display="none";
+}
+
+updateTimer();
+</script>
+
+</body>
+</html>
